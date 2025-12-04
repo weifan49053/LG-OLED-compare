@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLED vs LCD 背光技術演示</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a; /* 展示環境背景 */
+            font-family: "Microsoft JhengHei", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* 電視機身設計 */
+        .tv-frame {
+            position: relative;
+            width: 90vw;
+            height: 50.625vw; /* 16:9 比例 */
+            max-height: 85vh;
+            max-width: 151vh;
+            background: #000;
+            border: 15px solid #222;
+            border-bottom-width: 25px; /* 下巴厚一點 */
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        /* 電視腳架 */
+        .tv-stand {
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30%;
+            height: 35px;
+            background: linear-gradient(to bottom, #111, #333);
+            clip-path: polygon(10% 0, 90% 0, 100% 100%, 0% 100%);
+        }
+
+        /* 螢幕顯示區域 */
+        .screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            cursor: none; /* 在畫面上隱藏滑鼠 */
+        }
+
+        /* 通用全屏圖層 */
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 讓滑鼠點擊能穿透圖層 */
+        }
+
+        /* === 星空背景 === */
+        /* 使用 CSS 繪製隨機星星 */
+        .stars {
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(1px 1px at 15% 15%, #fff, transparent),
+                radial-gradient(2px 2px at 25% 65%, #fff, transparent),
+                radial-gradient(1px 1px at 45% 35%, #fff, transparent),
+                radial-gradient(2px 2px at 65% 15%, #fff, transparent),
+                radial-gradient(1px 1px at 85% 45%, #fff, transparent),
+                radial-gradient(1px 1px at 55% 85%, #fff, transparent),
+                radial-gradient(2px 2px at 10% 90%, #fff, transparent),
+                radial-gradient(1px 1px at 90% 10%, #fff, transparent);
+            opacity: 1;
+            transition: opacity 0.5s;
+        }
+
+        /* === 右側：LCD / Mini LED 模擬層 === */
+        #layer-lcd {
+            z-index: 10;
+            background-color: #050505; /* 預設 Mini LED 背景 (極深灰) */
+            transition: background-color 0.5s ease;
+        }
+
+        /* LCD 光球基礎設定 */
+        .ball-lcd {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: box-shadow 0.3s ease;
+        }
+
+        /* --- 等級 1: Mini LED 模式 (預設) --- */
+        /* 光暈小，黑位深 */
+        #layer-lcd.mode-mini .ball-lcd {
+            box-shadow: 
+                0 0 40px 10px rgba(255, 255, 255, 0.3), /* 核心光暈 */
+                0 0 80px 30px rgba(255, 255, 255, 0.1); /* 擴散 */
+        }
+
+        /* --- 等級 2: 傳統區域背光 (Local Dimming) --- */
+        /* 背景變亮，光暈變成「方形/大片霧狀」，模仿分區過少 */
+        #layer-lcd.mode-local {
+            background-color: #1a1a1a; /* 黑位明顯變灰 */
+        }
+        #layer-lcd.mode-local .stars {
+            opacity: 0.5; /* 星星被背光洗淡 */
+        }
+        #layer-lcd.mode-local .ball-lcd {
+            box-shadow: 
+                0 0 0 0px #fff,
+                /* 模擬方塊感光暈 */
+                0 0 60px 40px rgba(255, 255, 255, 0.5), 
+                0 0 150px 80px rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- 等級 3: 無分區 (Global Dimming / Full Array) --- */
+        /* 背景全亮 (漏光)，無光暈因為整個螢幕都在亮 */
+        #layer-lcd.mode-full {
+            background-color: #444; /* 整個螢幕變成灰色 */
+        }
+        #layer-lcd.mode-full .stars {
+            opacity: 0.2; /* 星星幾乎看不見 */
+        }
+        #layer-lcd.mode-full .ball-lcd {
+            box-shadow: none; /* 沒有光暈，因為背景已經亮到看不出光暈 */
+        }
+
+
+        /* === 左側：OLED 模擬層 (覆蓋在 LCD 上) === */
+        #layer-oled {
+            z-index: 20;
+            width: 50%; /* 佔據左半邊 */
+            background-color: #000000; /* 純粹的黑 */
+            overflow: hidden; /* 切割光球 */
+            border-right: 2px solid #00d2ff; /* 分割線 */
+        }
+
+        /* OLED 光球 */
+        .ball-oled {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            /* OLED 只有微弱的空氣散射，沒有面板光暈 */
+            box-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+        
+        /* OLED 標籤 */
+        .oled-tag {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00d2ff;
+            border: 1px solid #00d2ff;
+            background: rgba(0,0,0,0.8);
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        /* === 控制面板 (修復點擊問題) === */
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100; /* 確保在最上層 */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            cursor: default; /* 恢復游標顯示 */
+        }
+
+        .btn {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #666;
+            color: #aaa;
+            padding: 10px 15px;
+            cursor: pointer; /* 按鈕手型 */
+            text-align: left;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: 0.2s;
+            width: 140px;
+        }
+
+        .btn:hover {
+            background: rgba(50, 50, 50, 0.9);
+        }
+
+        .btn.active {
+            border-color: #ffaa00;
+            color: #ffaa00;
+            background: rgba(20, 20, 0, 0.9);
+            font-weight: bold;
+        }
+        
+        .btn small {
+            display: block;
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        /* 引導文字 */
+        .hint {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            opacity: 0.7;
+            pointer-events: none;
+            text-shadow: 0 2px 5px black;
+            z-index: 50;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="tv-frame">
+        <div class="screen" id="screen">
+            
+            <div id="layer-lcd" class="layer mode-mini">
+                <div class="stars"></div>
+                <div id="ball-lcd" class="ball-lcd"></div>
+            </div>
+
+            <div id="layer-oled" class="layer">
+                <div class="stars"></div>
+                <div class="oled-tag">OLED</div>
+                <div id="ball-oled" class="ball-oled"></div>
+            </div>
+
+            <div class="controls">
+                <div style="color:#ffaa00; font-size:12px; margin-bottom:5px; text-align:right;">右側面板設定 ▼</div>
+                <button class="btn active" onclick="setMode('mini')">
+                    Mini LED
+                    <small>分區極多，光暈微弱</small>
+                </button>
+                <button class="btn" onclick="setMode('local')">
+                    傳統區域背光
+                    <small>分區少，光暈明顯</small>
+                </button>
+                <button class="btn" onclick="setMode('full')">
+                    無分區背光
+                    <small>全螢幕發灰，對比低</small>
+                </button>
+            </div>
+
+            <div class="hint">拖曳光球來回移動 ↔ 比較差異</div>
+
+        </div>
+        <div class="tv-stand"></div>
+    </div>
+
+    <script>
+        const ballOled = document.getElementById('ball-oled');
+        const ballLcd = document.getElementById('ball-lcd');
+        const layerLcd = document.getElementById('layer-lcd');
+        const screen = document.getElementById('screen');
+        const btns = document.querySelectorAll('.btn');
+
+        // 初始化球體位置
+        let centerX = screen.offsetWidth / 2;
+        let centerY = screen.offsetHeight / 2;
+        updateBall(centerX, centerY);
+
+        // 監聽滑鼠移動
+        screen.addEventListener('mousemove', (e) => {
+            let rect = screen.getBoundingClientRect();
+            updateBall(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        // 監聽觸控移動 (修復手機版操作)
+        screen.addEventListener('touchmove', (e) => {
+            // 只有當觸控點不是在按鈕上時，才阻止預設滾動，避免按鈕按不到
+            if (!e.target.closest('.controls')) {
+                e.preventDefault();
+            }
+            let touch = e.touches[0];
+            let rect = screen.getBoundingClientRect();
+            updateBall(touch.clientX - rect.left, touch.clientY - rect.top);
+        }, { passive: false });
+
+        function updateBall(x, y) {
+            ballOled.style.left = x + 'px';
+            ballOled.style.top = y + 'px';
+            ballLcd.style.left = x + 'px';
+            ballLcd.style.top = y + 'px';
+        }
+
+        // 切換模式函數
+        window.setMode = function(mode) {
+            // 清除所有按鈕狀態
+            btns.forEach(b => b.classList.remove('active'));
+            
+            // 重置 Layer Class
+            layerLcd.className = 'layer'; 
+
+            if (mode === 'mini') {
+                layerLcd.classList.add('mode-mini');
+                btns[0].classList.add('active');
+            } else if (mode === 'local') {
+                layerLcd.classList.add('mode-local');
+                btns[1].classList.add('active');
+            } else if (mode === 'full') {
+                layerLcd.classList.add('mode-full');
+                btns[2].classList.add('active');
+            }
+        };
+    </script>
+</body>
+</html>

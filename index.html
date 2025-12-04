@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OLED vs Mini LED 銷售演示版</title>
+    <title>OLED vs Mini LED 真實物理光暈演示 V9</title>
     <style>
         body {
             margin: 0;
@@ -16,11 +16,10 @@
             height: 100vh;
         }
 
-        /* 電視外框 */
         .tv-frame {
             position: relative;
             width: 90vw;
-            height: 50.625vw; /* 16:9 */
+            height: 50.625vw;
             max-height: 85vh;
             max-width: 151vh;
             background: #000;
@@ -59,27 +58,58 @@
             pointer-events: none;
         }
 
-        .stars {
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(1.5px 1.5px at 15% 15%, #fff, transparent),
-                radial-gradient(2px 2px at 25% 65%, #fff, transparent),
-                radial-gradient(1px 1px at 45% 35%, #ddd, transparent),
-                radial-gradient(2px 2px at 65% 15%, #fff, transparent),
-                radial-gradient(1px 1px at 85% 45%, #eee, transparent),
-                radial-gradient(1.5px 1.5px at 55% 85%, #fff, transparent),
-                radial-gradient(2px 2px at 10% 90%, #ddd, transparent),
-                radial-gradient(1px 1px at 90% 10%, #fff, transparent);
-            opacity: 1;
-            transition: opacity 0.4s ease;
+        /* === 定義星星座標 (絕對對齊) === */
+        :root {
+            --pos-1: 15% 15%;
+            --pos-2: 25% 65%;
+            --pos-3: 45% 35%;
+            --pos-4: 65% 15%;
+            --pos-5: 85% 45%;
+            --pos-6: 55% 85%;
+            --pos-7: 10% 90%;
+            --pos-8: 90% 10%;
+            --pos-9: 35% 55%;
         }
 
         /* === 右側 LCD 模擬層 === */
         #layer-lcd {
             z-index: 10;
-            background-color: #060606; /* 調整重點：Mini LED 預設底色稍微調灰 */
-            transition: background-color 0.6s ease;
+            background-color: #060606; 
+            transition: background-color 0.5s ease;
+        }
+
+        /* --- 層次 1: 核心層 (永遠銳利) --- */
+        .stars-core {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            /* 1.5px 的針尖亮點 */
+            background-image: 
+                radial-gradient(1.5px 1.5px at var(--pos-1), #fff, transparent),
+                radial-gradient(2px 2px at var(--pos-2), #fff, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-3), #ddd, transparent),
+                radial-gradient(2px 2px at var(--pos-4), #fff, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-5), #fff, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-6), #fff, transparent),
+                radial-gradient(2px 2px at var(--pos-7), #ddd, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-8), #fff, transparent),
+                radial-gradient(2px 2px at var(--pos-9), #fff, transparent);
+            opacity: 1;
+        }
+
+        /* --- 層次 2: 光暈層 (Ghost Blooming Layer) --- */
+        .stars-halo {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            opacity: 0;
+            transition: all 0.5s ease;
         }
 
         .ball-lcd {
@@ -90,52 +120,99 @@
             border-radius: 50%;
             transform: translate(-50%, -50%);
             transition: box-shadow 0.4s ease;
+            z-index: 3;
         }
 
-        /* --- Mode 1: Mini LED (銷售調整版) --- */
-        /* 背景比純黑灰一點，光暈加強，讓對比差異肉眼可見 */
+        /* --- Mode 1: Mini LED (修正：加入中等大小的光暈) --- */
         #layer-lcd.mode-mini {
-            background-color: #060606; /* 讓消費者看出這不是「純黑」 */
+            background-color: #060606; 
+        }
+        #layer-lcd.mode-mini .stars-halo {
+            opacity: 0.7; /* 讓光暈可見 */
+            filter: blur(4px); /* 輕度模糊 */
+            
+            /* 技巧：這裡把光暈點設定為 4px - 5px (核心是 1.5px) */
+            /* 這樣會形成一個「緊貼著星星的小光環」 */
+            background-image: 
+                radial-gradient(4px 4px at var(--pos-1), rgba(255,255,255,0.9), transparent),
+                radial-gradient(5px 5px at var(--pos-2), rgba(255,255,255,0.9), transparent),
+                radial-gradient(4px 4px at var(--pos-3), rgba(255,255,255,0.9), transparent),
+                radial-gradient(5px 5px at var(--pos-4), rgba(255,255,255,0.9), transparent),
+                radial-gradient(4px 4px at var(--pos-5), rgba(255,255,255,0.9), transparent),
+                radial-gradient(4px 4px at var(--pos-6), rgba(255,255,255,0.9), transparent),
+                radial-gradient(5px 5px at var(--pos-7), rgba(255,255,255,0.9), transparent),
+                radial-gradient(4px 4px at var(--pos-8), rgba(255,255,255,0.9), transparent),
+                radial-gradient(5px 5px at var(--pos-9), rgba(255,255,255,0.9), transparent);
         }
         #layer-lcd.mode-mini .ball-lcd {
-            /* 調整重點：光暈變強、範圍變廣 */
             box-shadow: 
-                0 0 50px 15px rgba(255, 255, 255, 0.5), /* 核心光暈增強 */
-                0 0 100px 30px rgba(255, 255, 255, 0.2); /* 擴散霧氣增強 */
+                0 0 50px 15px rgba(255, 255, 255, 0.4), 
+                0 0 100px 30px rgba(255, 255, 255, 0.1); 
         }
 
-        /* --- Mode 2: 傳統區域背光 --- */
+        /* --- Mode 2: 傳統區域背光 (維持：巨大的光暈) --- */
         #layer-lcd.mode-local {
-            background-color: #0b0b0b; 
+            background-color: #0e0e0e; 
         }
-        #layer-lcd.mode-local .stars {
-            opacity: 0.7; 
+        #layer-lcd.mode-local .stars-halo {
+            opacity: 1; 
+            filter: blur(10px); /* 重度模糊 */
+            
+            /* 技巧：這裡把光暈點設定為 10px - 12px (超級大) */
+            /* 形成擴散的大霧氣 */
+            background-image: 
+                radial-gradient(10px 10px at var(--pos-1), rgba(255,255,255,0.8), transparent),
+                radial-gradient(12px 12px at var(--pos-2), rgba(255,255,255,0.8), transparent),
+                radial-gradient(10px 10px at var(--pos-3), rgba(255,255,255,0.8), transparent),
+                radial-gradient(12px 12px at var(--pos-4), rgba(255,255,255,0.8), transparent),
+                radial-gradient(10px 10px at var(--pos-5), rgba(255,255,255,0.8), transparent),
+                radial-gradient(10px 10px at var(--pos-6), rgba(255,255,255,0.8), transparent),
+                radial-gradient(12px 12px at var(--pos-7), rgba(255,255,255,0.8), transparent),
+                radial-gradient(10px 10px at var(--pos-8), rgba(255,255,255,0.8), transparent),
+                radial-gradient(12px 12px at var(--pos-9), rgba(255,255,255,0.8), transparent);
         }
         #layer-lcd.mode-local .ball-lcd {
             box-shadow: 
                 0 0 0 0px #fff,
-                0 0 80px 50px rgba(255, 255, 255, 0.35), 
-                0 0 180px 100px rgba(255, 255, 255, 0.15); 
+                0 0 100px 60px rgba(255, 255, 255, 0.4), 
+                0 0 200px 120px rgba(255, 255, 255, 0.2); 
         }
 
         /* --- Mode 3: 無分區背光 --- */
         #layer-lcd.mode-full {
-            background-color: #1c1c1c; 
+            background-color: #252525; 
         }
-        #layer-lcd.mode-full .stars {
+        #layer-lcd.mode-full .stars-halo {
+            opacity: 0; 
+        }
+        #layer-lcd.mode-full .stars-core {
             opacity: 0.4; 
         }
         #layer-lcd.mode-full .ball-lcd {
             box-shadow: none; 
         }
 
-        /* === 左側 OLED 模擬層 === */
+
+        /* === 左側 OLED 模擬層 (完美) === */
         #layer-oled {
             z-index: 20;
             width: 50%;
-            background-color: #000000; /* 絕對純黑 */
+            background-color: #000000;
             overflow: hidden;
             border-right: 2px solid #00d2ff;
+        }
+
+        #layer-oled .stars-core {
+            background-image: 
+                radial-gradient(1.5px 1.5px at var(--pos-1), #fff, transparent),
+                radial-gradient(2px 2px at var(--pos-2), #fff, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-3), #ddd, transparent),
+                radial-gradient(2px 2px at var(--pos-4), #fff, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-5), #fff, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-6), #fff, transparent),
+                radial-gradient(2px 2px at var(--pos-7), #ddd, transparent),
+                radial-gradient(1.5px 1.5px at var(--pos-8), #fff, transparent),
+                radial-gradient(2px 2px at var(--pos-9), #fff, transparent);
         }
 
         .ball-oled {
@@ -145,7 +222,7 @@
             background: #fff;
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 4px rgba(255,255,255,0.3); /* 極輕微的空氣感 */
+            box-shadow: 0 0 4px rgba(255,255,255,0.3);
         }
 
         .oled-tag {
@@ -241,12 +318,11 @@
         <div class="screen" id="screen">
             
             <div id="layer-lcd" class="layer mode-mini">
-                <div class="stars"></div>
-                <div id="ball-lcd" class="ball-lcd"></div>
+                <div class="stars-halo"></div> <div class="stars-core"></div> <div id="ball-lcd" class="ball-lcd"></div>
             </div>
 
             <div id="layer-oled" class="layer">
-                <div class="stars"></div>
+                <div class="stars-core"></div>
                 <div class="oled-tag">OLED 自發光</div>
                 <div id="ball-oled" class="ball-oled"></div>
             </div>
@@ -256,21 +332,21 @@
                 
                 <button class="btn active" onclick="setMode('mini')">
                     Mini LED
-                    <small>分區細膩，仍有輕微光暈</small>
+                    <small>有輕微光暈 (真實物理)</small>
                 </button>
                 
                 <button class="btn" onclick="setMode('local')">
                     傳統區域背光
-                    <small>黑位尚可，光暈明顯</small>
+                    <small>光暈非常明顯，嚴重溢出</small>
                 </button>
                 
                 <button class="btn" onclick="setMode('full')">
                     無分區背光
-                    <small>整體泛灰，對比度低</small>
+                    <small>無光暈，但黑位失效</small>
                 </button>
             </div>
 
-            <div class="hint">按住游標左右拖曳 ↔ 比較 OLED 絕對優勢</div>
+            <div class="hint">請比較：OLED (純淨) vs Mini LED (小光暈) vs 傳統 (大光暈)</div>
 
         </div>
         <div class="tv-stand"></div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OLED vs LCD 極速流暢版 V10</title>
+    <title>OLED vs LCD 畫質展示 V12 (UI外置版)</title>
     <style>
         body {
             margin: 0;
@@ -14,22 +14,108 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            position: relative; /* 為外部UI提供定位基準 */
         }
 
+        /* === UI 元素 (現在位於電視外部) === */
+
+        /* OLED 標籤 - 外置並縮小 */
+        .oled-tag-outside {
+            position: absolute;
+            top: 30px;
+            left: 40px;
+            color: #00d2ff;
+            border: 1px solid #00d2ff;
+            background: rgba(0,0,0,0.6); /*稍微透明一點*/
+            padding: 8px 12px; /* 縮小內邊距 */
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+            max-width: 280px; /* 縮小寬度 */
+            z-index: 200; /* 確保在最上層 */
+        }
+        .oled-title {
+            font-size: 16px; /* 縮小字體 */
+            font-weight: bold; display: block; margin-bottom: 3px;
+        }
+        .oled-desc {
+            font-size: 12px; /* 縮小字體 */
+            font-weight: normal; color: #ccf6ff; display: block;
+        }
+
+        /* 控制面板 - 外置並縮小 */
+        .controls-outside {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* 縮小間距 */
+            cursor: default;
+            align-items: flex-end;
+        }
+
+        .btn {
+            background: rgba(20, 20, 20, 0.8); /* 稍微透明 */
+            border: 1px solid #444;
+            color: #bbb;
+            padding: 10px 14px; /* 縮小內邊距 */
+            cursor: pointer;
+            text-align: left;
+            border-radius: 8px;
+            font-size: 14px; /* 縮小字體 */
+            transition: 0.2s;
+            width: 240px; /* 縮小寬度 */
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px); /* 加入毛玻璃效果提升質感 */
+        }
+        .btn:hover { background: rgba(50, 50, 50, 0.9); border-color: #777; }
+        .btn.active {
+            border-color: #ffaa00; color: #fff;
+            background: linear-gradient(90deg, rgba(40,30,0,0.9), rgba(20,20,20,0.9));
+            box-shadow: 0 0 15px rgba(255, 170, 0, 0.2);
+        }
+        .btn.active::before {
+            content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: #ffaa00;
+        }
+        .btn small {
+            display: block; font-size: 11px; /* 縮小字體 */
+            color: #999; margin-top: 4px; line-height: 1.3;
+        }
+        .btn.active small { color: #ffcc66; }
+
+        /* 底部提示 - 外置 */
+        .hint-outside {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            opacity: 0.5;
+            pointer-events: none;
+            text-shadow: 0 2px 4px #000;
+            font-size: 13px;
+            letter-spacing: 1px;
+            z-index: 200;
+        }
+
+
+        /* === 電視主體 === */
         .tv-frame {
             position: relative;
-            width: 90vw;
-            height: 50.625vw;
-            max-height: 85vh;
-            max-width: 151vh;
+            width: 85vw; /* 稍微縮小電視佔比，讓出空間給UI */
+            height: 47.8125vw; /* 保持 16:9 */
+            max-height: 80vh;
+            max-width: 142vh;
             background: #000;
             border: 15px solid #252525;
             border-bottom-width: 25px;
             border-radius: 6px;
-            box-shadow: 0 0 80px rgba(0,0,0,0.8);
-            /* 優化：禁止選取文字與反白，避免誤觸 */
+            box-shadow: 0 0 100px rgba(0,0,0,0.9); /* 加強陰影，提升立體感 */
             user-select: none;
             -webkit-user-select: none;
+            z-index: 100; /* 比UI低 */
         }
 
         .tv-stand {
@@ -54,14 +140,10 @@
 
         .layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
+            top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
         }
 
-        /* === 定義星星座標 === */
+        /* === 定義星星座標 (維持不變) === */
         :root {
             --pos-1: 15% 15%; --pos-2: 25% 65%; --pos-3: 45% 35%;
             --pos-4: 65% 15%; --pos-5: 85% 45%; --pos-6: 55% 85%;
@@ -70,14 +152,9 @@
 
         /* === 右側 LCD 模擬層 === */
         #layer-lcd {
-            z-index: 10;
-            background-color: #060606; 
-            transition: background-color 0.5s ease;
-            /* 優化：告訴瀏覽器這個層會變動 */
-            will-change: background-color; 
+            z-index: 10; background-color: #060606; transition: background-color 0.5s ease; will-change: background-color;
         }
-
-        /* 核心層 (Pixel) */
+        /* 核心層 */
         .stars-core {
             width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2;
             background-image: 
@@ -92,29 +169,13 @@
                 radial-gradient(2px 2px at var(--pos-9), #fff, transparent);
             opacity: 1;
         }
-
-        /* 光暈層 (Halo) */
+        /* 光暈層 */
         .stars-halo {
-            width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;
-            opacity: 0;
-            transition: opacity 0.5s ease, filter 0.5s ease;
-            /* 優化：減少渲染負擔 */
-            transform: translateZ(0); 
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; opacity: 0; transition: opacity 0.5s ease, filter 0.5s ease; transform: translateZ(0);
         }
-
-        /* 光球 (Flashlight) - 優化重點 */
+        /* 光球 */
         .ball-lcd {
-            position: absolute;
-            top: 0; left: 0; /* 改為 0，改用 transform 移動 */
-            width: 60px; height: 60px;
-            background: #fff;
-            border-radius: 50%;
-            /* 預設隱藏在外面 */
-            transform: translate3d(-100px, -100px, 0); 
-            transition: box-shadow 0.4s ease; /* 只對陰影做 transition */
-            z-index: 3;
-            /* 優化：GPU 加速提示 */
-            will-change: transform; 
+            position: absolute; top: 0; left: 0; width: 60px; height: 60px; background: #fff; border-radius: 50%; transform: translate3d(-100px, -100px, 0); transition: box-shadow 0.4s ease; z-index: 3; will-change: transform;
         }
 
         /* --- Mode 1: Mini LED --- */
@@ -132,11 +193,7 @@
                 radial-gradient(4px 4px at var(--pos-8), rgba(255,255,255,0.9), transparent),
                 radial-gradient(5px 5px at var(--pos-9), rgba(255,255,255,0.9), transparent);
         }
-        #layer-lcd.mode-mini .ball-lcd {
-            box-shadow: 
-                0 0 50px 15px rgba(255, 255, 255, 0.4), 
-                0 0 100px 30px rgba(255, 255, 255, 0.1); 
-        }
+        #layer-lcd.mode-mini .ball-lcd { box-shadow: 0 0 50px 15px rgba(255, 255, 255, 0.4), 0 0 100px 30px rgba(255, 255, 255, 0.1); }
 
         /* --- Mode 2: Traditional --- */
         #layer-lcd.mode-local { background-color: #0e0e0e; }
@@ -153,12 +210,7 @@
                 radial-gradient(10px 10px at var(--pos-8), rgba(255,255,255,0.8), transparent),
                 radial-gradient(12px 12px at var(--pos-9), rgba(255,255,255,0.8), transparent);
         }
-        #layer-lcd.mode-local .ball-lcd {
-            box-shadow: 
-                0 0 0 0px #fff,
-                0 0 100px 60px rgba(255, 255, 255, 0.4), 
-                0 0 200px 120px rgba(255, 255, 255, 0.2); 
-        }
+        #layer-lcd.mode-local .ball-lcd { box-shadow: 0 0 0 0px #fff, 0 0 100px 60px rgba(255, 255, 255, 0.4), 0 0 200px 120px rgba(255, 255, 255, 0.2); }
 
         /* --- Mode 3: Full --- */
         #layer-lcd.mode-full { background-color: #252525; }
@@ -168,10 +220,7 @@
 
 
         /* === 左側 OLED 模擬層 === */
-        #layer-oled {
-            z-index: 20; width: 50%; background-color: #000000; overflow: hidden; border-right: 2px solid #00d2ff;
-            /* 優化：靜態層不需要 will-change */
-        }
+        #layer-oled { z-index: 20; width: 50%; background-color: #000000; overflow: hidden; border-right: 2px solid #00d2ff; }
         #layer-oled .stars-core {
             background-image: 
                 radial-gradient(1.5px 1.5px at var(--pos-1), #fff, transparent),
@@ -184,55 +233,35 @@
                 radial-gradient(1.5px 1.5px at var(--pos-8), #fff, transparent),
                 radial-gradient(2px 2px at var(--pos-9), #fff, transparent);
         }
+        .ball-oled { position: absolute; top: 0; left: 0; width: 60px; height: 60px; background: #fff; border-radius: 50%; transform: translate3d(-100px, -100px, 0); box-shadow: 0 0 4px rgba(255,255,255,0.3); will-change: transform; }
 
-        .ball-oled {
-            position: absolute; top: 0; left: 0; width: 60px; height: 60px;
-            background: #fff; border-radius: 50%;
-            transform: translate3d(-100px, -100px, 0); /* 預設位置 */
-            box-shadow: 0 0 4px rgba(255,255,255,0.3);
-            will-change: transform;
-        }
-
-        .oled-tag {
-            position: absolute; top: 20px; left: 20px; color: #00d2ff;
-            border: 1px solid #00d2ff; background: rgba(0,0,0,0.8);
-            padding: 5px 15px; border-radius: 5px; font-weight: bold;
-            box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
-        }
-
-        /* === 控制面板 === */
-        .controls {
-            position: absolute; top: 20px; right: 20px; z-index: 100;
-            display: flex; flex-direction: column; gap: 12px; cursor: default;
-        }
-
-        .btn {
-            background: rgba(10, 10, 10, 0.85); border: 1px solid #444; color: #bbb;
-            padding: 12px 16px; cursor: pointer; text-align: left;
-            border-radius: 8px; font-size: 15px; transition: 0.2s; width: 160px;
-            position: relative; overflow: hidden;
-            /* 優化：按鈕不需要硬體加速 */
-        }
-        .btn:hover { background: rgba(40, 40, 40, 0.95); border-color: #777; }
-        .btn.active {
-            border-color: #ffaa00; color: #fff;
-            background: linear-gradient(90deg, rgba(40,30,0,0.95), rgba(20,20,20,0.95));
-            box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
-        }
-        .btn.active::before {
-            content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: #ffaa00;
-        }
-        .btn small { display: block; font-size: 11px; color: #888; margin-top: 4px; }
-        .btn.active small { color: #ffcc66; }
-
-        .hint {
-            position: absolute; bottom: 40px; width: 100%; text-align: center;
-            color: #fff; opacity: 0.6; pointer-events: none;
-            text-shadow: 0 2px 4px #000; font-size: 14px; letter-spacing: 1px;
-        }
     </style>
 </head>
 <body>
+
+    <div class="oled-tag-outside">
+        <span class="oled-title">OLED</span>
+        <span class="oled-desc">約830萬自體發光像素呈現完美畫質</span>
+    </div>
+
+    <div class="controls-outside">
+        <div style="color:#888; font-size:12px; margin-bottom:0px; text-align:right; padding-right:5px;">右側顯示技術模擬 ▼</div>
+        
+        <button class="btn active" onclick="setMode('mini')">
+            Mini LED
+            <small>精確控制背光提高畫面對比，但仍有光暈問題</small>
+        </button>
+        
+        <button class="btn" onclick="setMode('local')">
+            傳統區域背光
+            <small>有分區控制背光，但仍有光暈問題，明暗對比不佳</small>
+        </button>
+        
+        <button class="btn" onclick="setMode('full')">
+            無分區背光
+            <small>黑色看起來像灰色，畫質表現最差</small>
+        </button>
+    </div>
 
     <div class="tv-frame">
         <div class="screen" id="screen">
@@ -243,28 +272,13 @@
             </div>
             <div id="layer-oled" class="layer">
                 <div class="stars-core"></div>
-                <div class="oled-tag">OLED 自發光</div>
                 <div id="ball-oled" class="ball-oled"></div>
             </div>
-            <div class="controls">
-                <div style="color:#888; font-size:12px; margin-bottom:0px; text-align:right; padding-right:5px;">右側顯示技術模擬 ▼</div>
-                <button class="btn active" onclick="setMode('mini')">
-                    Mini LED
-                    <small>有輕微光暈 (真實物理)</small>
-                </button>
-                <button class="btn" onclick="setMode('local')">
-                    傳統區域背光
-                    <small>光暈非常明顯，嚴重溢出</small>
-                </button>
-                <button class="btn" onclick="setMode('full')">
-                    無分區背光
-                    <small>無光暈，但黑位失效</small>
-                </button>
-            </div>
-            <div class="hint">效能優化版：請比較 OLED vs LCD 的星星光暈細節</div>
         </div>
         <div class="tv-stand"></div>
     </div>
+
+    <div class="hint-outside">請比較：OLED (純黑畫質) vs 其他背光技術 (光暈與對比度)</div>
 
     <script>
         const ballOled = document.getElementById('ball-oled');
@@ -273,16 +287,13 @@
         const screen = document.getElementById('screen');
         const btns = document.querySelectorAll('.btn');
 
-        // 追蹤滑鼠位置
         let mouseX = screen.offsetWidth / 2;
         let mouseY = screen.offsetHeight / 2;
         let currentX = mouseX;
         let currentY = mouseY;
         
-        // 初始位置設定 (置中)
         updateBallPosition(mouseX, mouseY);
 
-        // 1. 滑鼠移動：只更新座標數據，不直接操作 DOM (避免效能瓶頸)
         screen.addEventListener('mousemove', (e) => {
             const rect = screen.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
@@ -290,42 +301,31 @@
         });
 
         screen.addEventListener('touchmove', (e) => {
-            if (!e.target.closest('.controls')) {
-                e.preventDefault();
-            }
+            // 因為按鈕在外面了，這裡不需要再防止冒泡，直接抓取相對座標即可
             const touch = e.touches[0];
             const rect = screen.getBoundingClientRect();
             mouseX = touch.clientX - rect.left;
             mouseY = touch.clientY - rect.top;
         }, { passive: false });
 
-        // 2. 動畫迴圈 (Render Loop)：使用 requestAnimationFrame 跟隨螢幕更新率
         function animate() {
-            // 使用內插法 (Linear Interpolation) 讓球跟隨滑鼠更平滑 (可選)
-            // 這裡直接跟隨以保持靈敏度
             currentX = mouseX;
             currentY = mouseY;
-            
             updateBallPosition(currentX, currentY);
-            
             requestAnimationFrame(animate);
         }
         
-        // 啟動動畫迴圈
         requestAnimationFrame(animate);
 
-        // 3. 實際更新 DOM 的函數 (使用 GPU 加速的 transform)
         function updateBallPosition(x, y) {
-            // translate3d 強制開啟 GPU 加速，且位移中心點 (-50%, -50%)
             const transformStyle = `translate3d(${x - 30}px, ${y - 30}px, 0)`;
             ballOled.style.transform = transformStyle;
             ballLcd.style.transform = transformStyle;
         }
 
-        // 切換模式邏輯
         window.setMode = function(mode) {
             btns.forEach(b => b.classList.remove('active'));
-            layerLcd.className = 'layer'; // 重置
+            layerLcd.className = 'layer'; 
 
             if (mode === 'mini') {
                 layerLcd.classList.add('mode-mini');
